@@ -3,6 +3,10 @@ using UnityEngine.InputSystem;
 
 public class TomatoController : MonoBehaviour
 {
+    public TomatoController Instance { get; private set; }
+
+
+
     [Header("Movimiento")]
     [SerializeField] private float moveSpeed = 20f;
     [SerializeField] private float maxSpeed = 5f;
@@ -22,7 +26,7 @@ public class TomatoController : MonoBehaviour
 
     [Header("Calidad")]
     [SerializeField] private float maxQuality = 100f;
-    [SerializeField] private float qualityLoss = 5f;
+    [SerializeField] private float qualityLoss = 0.5f;
 
     private Rigidbody rb;
     private Vector3 normalScale;
@@ -124,8 +128,9 @@ public class TomatoController : MonoBehaviour
         if (wantsToBeSmall && !isSmall)
         {
             isSmall = true;
-            Debug.Log("Se achico");
-            quality = Mathf.Clamp(quality - qualityLoss, 0, maxQuality);
+            LossQuality();
+
+
         }
         else if (!wantsToBeSmall)
         {
@@ -148,4 +153,12 @@ public class TomatoController : MonoBehaviour
         float currentRayDistance = raycastDistance * transform.localScale.y;
         Gizmos.DrawLine(transform.position, transform.position + Vector3.down * currentRayDistance);
     }
+
+    public void LossQuality()
+    {
+        quality -= qualityLoss;
+        Debug.Log("Calidad: " + quality);
+        quality = Mathf.Clamp(quality, 0, maxQuality);
+    }
+
 }
