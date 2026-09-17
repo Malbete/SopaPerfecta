@@ -4,14 +4,16 @@ using UnityEngine.InputSystem;
 public class TomatoController : MonoBehaviour
 {
     [Header("Movimiento")]
-    [SerializeField] private float moveSpeed = 35f;
-    [SerializeField] private float maxSpeed = 40f;
-    [SerializeField] private float deceleration = 1f;
+    [SerializeField] private float moveSpeed = 20f;
+    [SerializeField] private float maxSpeed = 5f;
+    [SerializeField] private float deceleration = 15f;
     [SerializeField] private InputActionReference movementInput;
 
     [Header("Salto")]
     [SerializeField] private float jumpForce = 7f;
     [SerializeField] private InputActionReference jumpInput;
+    [SerializeField] private float raycastDistance = 0.6f;
+    [SerializeField] private LayerMask groundLayer;
 
     [Header("Tamaño")]
     [SerializeField] private float smallScale = 0.6f;
@@ -27,6 +29,7 @@ public class TomatoController : MonoBehaviour
     private float quality;
     private bool isSmall;
     private bool isGrounded;
+    private bool jumpRequested;
 
     public float Quality => quality;
     public bool IsSmall => isSmall;
@@ -55,12 +58,25 @@ public class TomatoController : MonoBehaviour
     private void Update()
     {
         HandleSize();
+
+        if (jumpInput.action.WasPressedThisFrame())
+        {
+            jumpRequested = true;
+        }
     }
 
     private void FixedUpdate()
     {
+        CheckGround();
         HandleMovement();
         HandleJump();
+    }
+
+    private void CheckGround()
+    {
+        // Se calcula la distancia dinámica considerando si el objeto achicó su escala
+        float currentRayDistance = raycastDistance * transform.localScale.y;
+        isGrounded = Physics.Raycast(transform.position, Vector3.down, currentRayDistance, groundLayer);
     }
 
     private void HandleMovement()
@@ -70,7 +86,6 @@ public class TomatoController : MonoBehaviour
 
         if (movement.magnitude > 0.01f)
             rb.AddForce(movement.normalized * moveSpeed);
-
         else
         {
             Vector3 velocity = rb.linearVelocity;
@@ -84,17 +99,22 @@ public class TomatoController : MonoBehaviour
         if (horizontalVelocity.magnitude > maxSpeed)
         {
             horizontalVelocity = horizontalVelocity.normalized * maxSpeed;
-            rb.linearVelocity = new Vector3(horizontalVelocity.x,rb.linearVelocity.y,horizontalVelocity.z);
+            rb.linearVelocity = new Vector3(
+                horizontalVelocity.x,
+                rb.linearVelocity.y,
+                horizontalVelocity.z
+            );
         }
     }
 
     private void HandleJump()
     {
-        if (jumpInput.action.WasPressedThisFrame() && isGrounded)
+        if (jumpRequested && isGrounded)
         {
             rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
-            isGrounded = false;
         }
+
+        jumpRequested = false;
     }
 
     private void HandleSize()
@@ -114,23 +134,18 @@ public class TomatoController : MonoBehaviour
 
         Vector3 targetScale = normalScale * (isSmall ? smallScale : 1f);
 
-        transform.localScale = Vector3.Lerp(transform.localScale,targetScale,scaleSpeed * Time.deltaTime);
+        transform.localScale = Vector3.Lerp(
+            transform.localScale,
+            targetScale,
+            scaleSpeed * Time.deltaTime
+        );
     }
 
-    private void OnCollisionStay(Collision collision)
+    private void OnDrawGizmosSelected()
     {
-        foreach (ContactPoint contact in collision.contacts)
-        {
-            if (contact.normal.y > 0.5f)
-            {
-                isGrounded = true;
-                return;
-            }
-        }
-    }
-
-    private void OnCollisionExit(Collision collision)
-    {
-        isGrounded = false;
+        // Permite visualizar la línea del Raycast en el editor
+        Gizmos.color = Color.red;
+        float currentRayDistance = raycastDistance * transform.localScale.y;
+        Gizmos.DrawLine(transform.position, transform.position + Vector3.down * currentRayDistance);
     }
 }
