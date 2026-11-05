@@ -9,6 +9,7 @@ public class TomatoController : MonoBehaviour
     [SerializeField] private float maxSpeed = 5f;
     [SerializeField] private float deceleration = 15f;
     [SerializeField] private InputActionReference movementInput;
+    [SerializeField] private Transform cameraTransform;
 
     [Header("Salto")]
     [SerializeField] private float jumpForce = 7f;
@@ -43,6 +44,11 @@ public class TomatoController : MonoBehaviour
         rb = GetComponent<Rigidbody>();
         normalScale = transform.localScale;
         quality = maxQuality;
+
+        if (cameraTransform == null && Camera.main != null)
+        {
+            cameraTransform = Camera.main.transform;
+        }
     }
 
     private void OnEnable()
@@ -97,7 +103,24 @@ public class TomatoController : MonoBehaviour
         Vector2 input = movementInput != null && movementInput.action != null
             ? movementInput.action.ReadValue<Vector2>()
             : Vector2.zero;
-        Vector3 movement = new Vector3(input.x, 0f, input.y);
+        
+        Vector3 forward = Vector3.forward;
+        Vector3 right = Vector3.right;
+
+        if (cameraTransform != null)
+        {
+            forward = Vector3.ProjectOnPlane(cameraTransform.forward,Vector3.up);
+            right = Vector3.ProjectOnPlane(cameraTransform.right, Vector3.up);
+
+            if (forward.sqrMagnitude > 0.001f)
+                forward.Normalize();
+            
+            if (right.sqrMagnitude > 0.001f)
+                right.Normalize();
+        }
+
+        Vector3 movement = forward * input.y + right * input.x;
+        movement = Vector3.ClampMagnitude(movement, 1f);
 
         float acceleration = moveSpeed * surfaceState.AccelerationMultiplier;
         float braking = deceleration * surfaceState.BrakingMultiplier;
